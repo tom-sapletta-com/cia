@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIA Surveillance Interface</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .scan-line {
+            animation: scan 3s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        .rotate {
+            animation: rotate 20s linear infinite;
+            transform-origin: center;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .blink {
+            animation: blink 1s step-start infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .glitch {
+            animation: glitch 0.5s infinite;
+        }
+        
+        @keyframes glitch {
+            0%, 90% { opacity: 1; }
+            91%, 93% { opacity: 0.4; }
+            94%, 100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <!-- Definicje -->
+            <defs>
+                <!-- Gradient dla mapy -->
+                <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#00ff41;stop-opacity:0.8" />
+                    <stop offset="100%" style="stop-color:#00ff41;stop-opacity:0.2" />
+                </linearGradient>
+                
+                <!-- Filtr rozmycia -->
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                
+                <!-- Filtr szumu -->
+                <filter id="noise">
+                    <feTurbulence baseFrequency="0.9" numOctaves="4" seed="5"/>
+                    <feColorMatrix type="saturate" values="0"/>
+                    <feComponentTransfer>
+                        <feFuncA type="discrete" tableValues="0 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 1"/>
+                    </feComponentTransfer>
+                    <feBlend mode="overlay"/>
+                </filter>
+            </defs>
+            
+            <!-- Tło z siatką -->
+            <rect width="1920" height="1080" fill="#000a00"/>
+            
+            <!-- Siatka współrzędnych -->
+            <g stroke="#00ff41" stroke-width="0.5" opacity="0.2">
+                <line x1="0" y1="540" x2="1920" y2="540"/>
+                <line x1="960" y1="0" x2="960" y2="1080"/>
+                <g id="grid"></g>
+            </g>
+            
+            <!-- Uproszczona mapa świata -->
+            <g id="worldMap" stroke="#00ff41" stroke-width="1" fill="none" opacity="0.6" filter="url(#glow)">
+                <!-- Ameryka Północna -->
+                <path d="M 300 350 L 320 320 L 380 310 L 420 330 L 450 350 L 430 380 L 400 400 L 350 390 L 300 350"/>
+                <!-- Ameryka Południowa -->
+                <path d="M 380 480 L 390 460 L 400 480 L 410 520 L 400 580 L 380 600 L 360 580 L 360 520 L 380 480"/>
+                <!-- Europa -->
+                <path d="M 900 320 L 940 310 L 960 320 L 950 340 L 920 350 L 900 340 L 900 320"/>
+                <!-- Afryka -->
+                <path d="M 920 420 L 940 400 L 960 420 L 970 480 L 950 520 L 920 510 L 910 460 L 920 420"/>
+                <!-- Azja -->
+                <path d="M 1100 300 L 1200 290 L 1300 310 L 1350 350 L 1300 380 L 1200 370 L 1100 340 L 1100 300"/>
+                <!-- Australia -->
+                <path d="M 1300 550 L 1350 540 L 1380 560 L 1360 590 L 1320 580 L 1300 550"/>
+            </g>
+            
+            <!-- Główny celownik -->
+            <g id="mainTarget" class="rotate">
+                <circle cx="960" cy="540" r="100" stroke="#00ff41" stroke-width="2" fill="none" opacity="0.8"/>
+                <circle cx="960" cy="540" r="80" stroke="#00ff41" stroke-width="1" fill="none" opacity="0.6"/>
+                <circle cx="960" cy="540" r="60" stroke="#00ff41" stroke-width="1" fill="none" opacity="0.4"/>
+                <line x1="860" y1="540" x2="1060" y2="540" stroke="#00ff41" stroke-width="2"/>
+                <line x1="960" y1="440" x2="960" y2="640" stroke="#00ff41" stroke-width="2"/>
+            </g>
+            
+            <!-- Punkty celów -->
+            <g id="targets"></g>
+            
+            <!-- Linie połączeń -->
+            <g id="connections" stroke="#00ff41" stroke-width="1" opacity="0.5"></g>
+            
+            <!-- Linia skanująca -->
+            <rect class="scan-line" x="0" y="0" width="1920" height="2" fill="#00ff41" opacity="0.8" filter="url(#glow)"/>
+            
+            <!-- Interfejs tekstowy -->
+            <g fill="#00ff41" font-family="Courier New" font-size="14">
+                <!-- Nagłówek -->
+                <text x="50" y="50" font-size="24" font-weight="bold" class="glitch">
+                    SURVEILLANCE SYSTEM ACTIVE
+                </text>
+                
+                <!-- Status -->
+                <text x="50" y="80" font-size="16">
+                    STATUS: <tspan class="blink">TRACKING</tspan>
+                </text>
+                
+                <!-- Współrzędne -->
+                <text x="50" y="110" id="coords">
+                    LAT: 52.2297° N | LON: 21.0122° E
+                </text>
+                
+                <!-- Data i czas -->
+                <text x="50" y="140" id="datetime"></text>
+                
+                <!-- Cele -->
+                <text x="50" y="180" font-size="16">TARGETS IDENTIFIED: <tspan id="targetCount">0</tspan></text>
+                
+                <!-- Prawy panel -->
+                <text x="1600" y="50" font-size="16">SIGNAL STRENGTH</text>
+                <rect x="1600" y="60" width="200" height="20" fill="none" stroke="#00ff41"/>
+                <rect x="1600" y="60" width="160" height="20" fill="#00ff41" opacity="0.6" class="pulse"/>
+                
+                <text x="1600" y="110">ENCRYPTION: AES-256</text>
+                <text x="1600" y="140">SATELLITE: RECON-7</text>
+                <text x="1600" y="170">BANDWIDTH: 2.4 GHz</text>
+                
+                <!-- Dolny panel -->
+                <text x="50" y="1020" font-size="12" opacity="0.8">
+                    CLASSIFIED // TOP SECRET // EYES ONLY
+                </text>
+            </g>
+            
+            <!-- Radar -->
+            <g transform="translate(1650, 900)">
+                <circle r="100" fill="none" stroke="#00ff41" stroke-width="1" opacity="0.5"/>
+                <circle r="75" fill="none" stroke="#00ff41" stroke-width="0.5" opacity="0.3"/>
+                <circle r="50" fill="none" stroke="#00ff41" stroke-width="0.5" opacity="0.3"/>
+                <circle r="25" fill="none" stroke="#00ff41" stroke-width="0.5" opacity="0.3"/>
+                <line x1="0" y1="-100" x2="0" y2="100" stroke="#00ff41" stroke-width="0.5" opacity="0.3"/>
+                <line x1="-100" y1="0" x2="100" y2="0" stroke="#00ff41" stroke-width="0.5" opacity="0.3"/>
+                <g class="rotate" transform-origin="0 0">
+                    <line x1="0" y1="0" x2="0" y2="-100" stroke="#00ff41" stroke-width="2" opacity="0.8">
+                        <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite"/>
+                    </line>
+                </g>
+            </g>
+        </svg>
+    </div>
+    
+    <script>
+        // Generowanie siatki
+        const grid = document.getElementById('grid');
+        for(let i = 100; i < 1920; i += 100) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', i);
+            line.setAttribute('y1', 0);
+            line.setAttribute('x2', i);
+            line.setAttribute('y2', 1080);
+            grid.appendChild(line);
+        }
+        for(let i = 100; i < 1080; i += 100) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', 0);
+            line.setAttribute('y1', i);
+            line.setAttribute('x2', 1920);
+            line.setAttribute('y2', i);
+            grid.appendChild(line);
+        }
+        
+        // Aktualizacja czasu
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toISOString().replace('T', ' ').substr(0, 19);
+            document.getElementById('datetime').textContent = `TIMESTAMP: ${dateStr} UTC`;
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+        
+        // Generowanie celów
+        const targets = document.getElementById('targets');
+        const connections = document.getElementById('connections');
+        const targetPositions = [];
+        
+        function createTarget() {
+            const x = Math.random() * 1920;
+            const y = Math.random() * 1080;
+            targetPositions.push({x, y});
+            
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('transform', `translate(${x}, ${y})`);
+            g.classList.add('pulse');
+            
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', -15);
+            rect.setAttribute('y', -15);
+            rect.setAttribute('width', 30);
+            rect.setAttribute('height', 30);
+            rect.setAttribute('fill', 'none');
+            rect.setAttribute('stroke', '#ff0000');
+            rect.setAttribute('stroke-width', 2);
+            
+            const cross1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            cross1.setAttribute('x1', -20);
+            cross1.setAttribute('y1', 0);
+            cross1.setAttribute('x2', 20);
+            cross1.setAttribute('y2', 0);
+            cross1.setAttribute('stroke', '#ff0000');
+            cross1.setAttribute('stroke-width', 1);
+            
+            const cross2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            cross2.setAttribute('x1', 0);
+            cross2.setAttribute('y1', -20);
+            cross2.setAttribute('x2', 0);
+            cross2.setAttribute('y2', 20);
+            cross2.setAttribute('stroke', '#ff0000');
+            cross2.setAttribute('stroke-width', 1);
+            
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', 25);
+            text.setAttribute('y', -25);
+            text.setAttribute('fill', '#00ff41');
+            text.setAttribute('font-size', '12');
+            text.textContent = `TGT-${targetPositions.length.toString().padStart(3, '0')}`;
+            
+            g.appendChild(rect);
+            g.appendChild(cross1);
+            g.appendChild(cross2);
+            g.appendChild(text);
+            targets.appendChild(g);
+            
+            // Aktualizacja licznika
+            document.getElementById('targetCount').textContent = targetPositions.length;
+            
+            // Dodanie linii połączenia
+            if(targetPositions.length > 1) {
+                const prev = targetPositions[targetPositions.length - 2];
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', prev.x);
+                line.setAttribute('y1', prev.y);
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', y);
+                line.style.strokeDasharray = '5,5';
+                connections.appendChild(line);
+            }
+            
+            // Usuń cel po 10 sekundach
+            setTimeout(() => {
+                g.remove();
+            }, 10000);
+        }
+        
+        // Generuj nowe cele co 3 sekundy
+        setInterval(createTarget, 3000);
+        createTarget(); // Pierwszy cel
+        
+        // Aktualizacja współrzędnych (symulacja ruchu)
+        function updateCoords() {
+            const lat = (52.2297 + (Math.random() - 0.5) * 0.01).toFixed(4);
+            const lon = (21.0122 + (Math.random() - 0.5) * 0.01).toFixed(4);
+            document.getElementById('coords').textContent = `LAT: ${lat}° N | LON: ${lon}° E`;
+        }
+        setInterval(updateCoords, 2000);
+        
+        // Efekt glitch
+        setInterval(() => {
+            const svg = document.querySelector('svg');
+            svg.style.filter = 'url(#noise)';
+            setTimeout(() => {
+                svg.style.filter = '';
+            }, 50);
+        }, Math.random() * 5000 + 5000);
+    </script>
+</body>
+</html>
